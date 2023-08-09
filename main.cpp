@@ -138,6 +138,6 @@ void draw(bool (&field)[CELLS_COUNT], SDL_Renderer* renderer) {
 
 int loop(int value, int limit) {
 	if (value > limit) return value - limit;
-	else if (value < 0) return value + limit;
-	else return value;
+	if (value < 0) return value + limit;
+	return value;
 }

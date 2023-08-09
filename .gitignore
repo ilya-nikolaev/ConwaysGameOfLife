@@ -1,5 +1,3 @@
 Debug/
 Release/
-.settings/
-.cproject
-.project
+ConwaysGameOfLife.cbp
