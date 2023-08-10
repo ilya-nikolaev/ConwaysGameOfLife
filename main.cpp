@@ -1,19 +1,29 @@
 #include <SDL2/SDL.h>
 
+#include <iostream>
 #include <random>
+#include <set>
 
 
 const int MAX_FPS = 60;
-const int SCREEN_HEIGHT = 1080;
 const int SCREEN_WIDTH = 1920;
+const int SCREEN_HEIGHT = 1080;
 
 const int CELLS_COUNT = SCREEN_HEIGHT * SCREEN_WIDTH;
 
 
 void fill_field(bool (&)[CELLS_COUNT]);
+
 void step(bool (&)[CELLS_COUNT]);
-void draw(bool (&)[CELLS_COUNT], SDL_Renderer*);
+bool apply_rules(bool, int);
 int loop(int, int);
+
+void draw(bool (&)[CELLS_COUNT], SDL_Renderer*);
+
+const std::set<int> B {3};
+const std::set<int> S {2, 3};
+
+const int FILL_PERCENT = 10;
 
 
 int main() {
@@ -86,9 +96,11 @@ int main() {
 void fill_field(bool (&field)[CELLS_COUNT]) {
 	std::random_device dev;
 	std::mt19937 rng(dev());
-	std::uniform_int_distribution<std::mt19937::result_type> dist(0, 1);
+	std::uniform_int_distribution<std::mt19937::result_type> dist(0, 99);
 
-	for (int i = 0; i < CELLS_COUNT; i++) field[i] = dist(rng);
+	for (int i = 0; i < CELLS_COUNT; i++) {
+        field[i] = dist(rng) < FILL_PERCENT;
+	}
 }
 
 
@@ -111,16 +123,21 @@ void step(bool (&field)[CELLS_COUNT]) {
 			alive += field[cy * SCREEN_WIDTH + cx];
 		}
 
-		if (field[i]) {
-			if (alive == 2 || alive == 3) backbuffer[i] = true;
-			else backbuffer[i] = false;
-		} else {
-			if (alive == 3) backbuffer[i] = true;
-			else backbuffer[i] = false;
-		}
+		backbuffer[i] = apply_rules(field[i], alive);
 	}
 
 	std::swap(field, backbuffer);
+}
+
+
+bool apply_rules(bool current, int alive) {
+    if (current) {
+        if (S.find(alive) != S.end()) return true;
+        else return false;
+    } else {
+        if (B.find(alive) != B.end()) return true;
+        else return false;
+    }
 }
 
 
