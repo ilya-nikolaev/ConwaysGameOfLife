@@ -1,8 +1,6 @@
 #include <SDL2/SDL.h>
-
 #include <unistd.h>
 
-#include <iostream>
 #include <random>
 
 
@@ -52,7 +50,7 @@ class Field {
             std::mt19937 rng(dev());
             std::uniform_int_distribution<std::mt19937::result_type> dist(1, 100);
 
-            for (int i = 0; i < c; i++) field[i] = (uint8_t)(dist(rng) < p);
+            for (int i = 0; i < c; i++) field[i] = (uint8_t)((uint32_t)dist(rng) < (uint32_t)p);
         }
 
         void clear_field() {
