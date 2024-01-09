@@ -7,8 +7,18 @@ The Game of Life, also known simply as Life, is a cellular automaton devised by 
 ## Implementation
 This implementation is written in C++ using the standard library and the SDL2 library
 
-## Controls
-To exit press escape. To stop simulation use left mouse button. To refresh field you can use space bar or right mouse button.
+## Parameters
++ `-w {int}` - Window width (default `1280`)
++ `-h {int}` - Window height (default `720`)
++ `-f` - Use fullscreen (default `false`)
++ `-B {string}` - Rules for cell birth (example: `-B 345`, default `3`)
++ `-S {string}` - Rules for cell survival (example: `-S 567`, default `23`)
++ `-p {int 0-100}` - Percentage of field filling (default `10`)
 
-## Plans
-I plan to add more controls to the game, perhaps integrate an editor, make settings to a file.
+
+## Controls
++ Escape - Exit
++ Space - Pause
++ R - Refresh field
++ C - Clear field
++ Left Mouse Button - Draw on field

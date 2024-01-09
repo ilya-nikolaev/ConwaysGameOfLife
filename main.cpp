@@ -1,20 +1,21 @@
 #include <SDL2/SDL.h>
 
+#include <unistd.h>
+
 #include <iostream>
 #include <random>
 
 
 const int MAX_FPS = 60;
-const int SCREEN_WIDTH = 1920;
-const int SCREEN_HEIGHT = 1080;
-const int FILL_PERCENT = 10;
-
-const int CELLS_COUNT = SCREEN_HEIGHT * SCREEN_WIDTH;
+const int RULE_LENGTH = 9;
 
 
 class Field {
     private:
-        uint8_t* pixels;
+        uint8_t* field;
+        int x, y, p, c;
+
+        int8_t *B, *S;
 
         int loop(int value, int limit) {
             if (value > limit) return value - limit;
@@ -22,14 +23,28 @@ class Field {
             return value;
         }
 
+        int find(int8_t* container, int8_t value) {
+            for (int i = 0; i < RULE_LENGTH; ++i) {
+                if (container[i] == -1) break;
+                if (container[i] == value) return 1;
+            }
+
+            return 0;
+        }
+
     public:
-        Field() {
-            pixels = (uint8_t*)malloc(CELLS_COUNT * sizeof(uint8_t));
+        Field(int x_, int y_, int p_, int8_t B_[9], int8_t S_[9]) {
+            x = x_; y = y_; p = p_;
+            c = x * y;
+            B = B_; S = S_;
+
+            field = (uint8_t*)malloc(c * sizeof(uint8_t));
+
             fill_field();
         }
 
         ~Field() {
-            free(pixels);
+            free(field);
         }
 
         void fill_field() {
@@ -37,37 +52,45 @@ class Field {
             std::mt19937 rng(dev());
             std::uniform_int_distribution<std::mt19937::result_type> dist(1, 100);
 
-            for (int i = 0; i < CELLS_COUNT; i++) pixels[i] = (int)(dist(rng) < FILL_PERCENT);
+            for (int i = 0; i < c; i++) field[i] = (uint8_t)(dist(rng) < p);
+        }
+
+        void clear_field() {
+            for (int i = 0; i < c; i++) field[i] = 0;
         }
 
         void step() {
-            uint8_t* backbuffer = (uint8_t*)calloc(CELLS_COUNT, sizeof(uint8_t));
+            uint8_t* backbuffer = (uint8_t*)calloc(c, sizeof(uint8_t));
 
-            for (int i = 0; i < CELLS_COUNT; i++) {
-                int y = i / SCREEN_WIDTH,
-                    x = i - y * SCREEN_WIDTH;
+            for (int i = 0; i < c; i++) {
+                int iy = i / x, ix = i - iy * x;
 
-                int alive = 0;
+                int8_t alive = 0;
 
                 for (int j = 0; j < 9; j++) {
-                    int dx = j / 3 - 1, dy = j % 3 - 1;
-                    if (dx == 0 && dy == 0) continue;
+                    int jx = j / 3 - 1, jy = j % 3 - 1;
+                    if (jx == 0 && jy == 0) continue;
 
-                    int cx = loop(x + dx, SCREEN_WIDTH),
-                        cy = loop(y + dy, SCREEN_HEIGHT);
+                    int cx = loop(ix + jx, x),
+                        cy = loop(iy + jy, y);
 
-                    alive += pixels[cy * SCREEN_WIDTH + cx];
+                    alive += field[cy * x + cx];
                 }
 
-                if ((pixels[i] && (alive == 2 || alive == 3)) || (!(pixels[i]) && (alive == 3))) backbuffer[i] = 1;
+                if ((field[i] && find(S, alive)) || (!(field[i]) && find(B, alive))) 
+                    backbuffer[i] = 1;
             }
 
-            std::swap(pixels, backbuffer);
+            std::swap(field, backbuffer);
             free(backbuffer);
         }
 
-        uint8_t get_pixel(int i) {
-            return pixels[i];
+        uint8_t get_cell(int i) {
+            return field[i];
+        }
+
+        void set_cell(int i, uint8_t value) {
+            field[i] = value;
         }
 };
 
@@ -81,12 +104,14 @@ class UI {
         uint32_t* pixels;
 
         Field* field;
+        int x, y, c;
 
         bool running;
         bool is_stopped;
+        bool lmbDown = false;
 
         void draw() {
-            for (int i = 0; i < CELLS_COUNT; i++) pixels[i] = field->get_pixel(i) ? 0xFF00FF00 : 0x00000000;
+            for (int i = 0; i < c; i++) pixels[i] = field->get_cell(i) ? 0xFF00FF00 : 0x00000000;
         }
 
         void handle_controls() {
@@ -95,13 +120,20 @@ class UI {
                 case SDL_KEYDOWN:
                     switch(event.key.keysym.sym) {
                         case SDLK_ESCAPE: running = false; break;
-                        case SDLK_SPACE: field->fill_field(); break;
+                        case SDLK_SPACE: is_stopped = !is_stopped; break;
+                        case SDLK_r: field->fill_field(); break;
+                        case SDLK_c: field->clear_field(); break;
                     }
                     break;
                 case SDL_MOUSEBUTTONDOWN:
-                    switch(event.button.button) {
-                        case SDL_BUTTON_LEFT: is_stopped = !is_stopped; break;
-                        case SDL_BUTTON_RIGHT: field->fill_field(); break;
+                    if (event.button.button == SDL_BUTTON_LEFT) lmbDown = true;
+                    break;
+                case SDL_MOUSEBUTTONUP:
+                    if (event.button.button == SDL_BUTTON_LEFT) lmbDown = false;
+                    break;
+                case SDL_MOUSEMOTION:
+                    if (lmbDown) {
+                        field->set_cell(event.motion.x + event.motion.y * x, 1);
                     }
                     break;
                 case SDL_QUIT:
@@ -114,18 +146,20 @@ class UI {
         }
 
     public:
-        UI(Field* field) {
+        UI(Field* field_, int x_, int y_, int f_) {
+            x = x_; y = y_; c = x * y;
             SDL_Init(SDL_INIT_VIDEO);
-            SDL_CreateWindowAndRenderer(SCREEN_WIDTH, SCREEN_HEIGHT, 0, &window, &renderer);
-            SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
-            texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, SCREEN_WIDTH, SCREEN_HEIGHT);
+            SDL_CreateWindowAndRenderer(x, y, 0, &window, &renderer);
+            if (f_) SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
+            else SDL_SetWindowFullscreen(window, SDL_WINDOW_MAXIMIZED);
+            texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, x, y);
 
             running = true;
             is_stopped = false;
 
-            this->field = field;
+            field = field_;
 
-            pixels = (uint32_t*)malloc(CELLS_COUNT * sizeof(uint32_t));
+            pixels = (uint32_t*)malloc(c * sizeof(uint32_t));
         }
 
         ~UI() {
@@ -150,7 +184,7 @@ class UI {
                 if (time_delta > 1000.0 / MAX_FPS) {
                     draw();
 
-                    SDL_UpdateTexture(texture, NULL, pixels, SCREEN_WIDTH * sizeof(uint32_t));
+                    SDL_UpdateTexture(texture, NULL, pixels, x * sizeof(uint32_t));
 
                     SDL_RenderClear(renderer);
                     SDL_RenderCopy(renderer, texture, NULL, NULL);
@@ -164,9 +198,42 @@ class UI {
 };
 
 
-int main() {
-    Field field;
-    UI ui(&field);
+int main(int argc, char* argv[]) {
+    int width = 1920, height = 1080, p = 10;
+
+    int8_t B[RULE_LENGTH] = {3, -1, -1, -1, -1, -1, -1, -1, -1};
+    int8_t S[RULE_LENGTH] = {2, 3, -1, -1, -1, -1, -1, -1, -1};
+
+    int fullscreen = 0;
+
+    int rez = 0, c;
+    while ((rez = getopt(argc, argv, "w:h:B:S:p:f")) != -1) {
+        switch (rez) {
+            case 'w': width = atoi(optarg); break;
+            case 'h': height = atoi(optarg); break;
+            case 'f': fullscreen = 1; break;
+            case 'B': 
+                c = 0;
+                B[0] = -1;
+                for (int i = 0; i < RULE_LENGTH; ++i) {
+                    int e = optarg[i];
+                    if (!e || e < '0' || e > '8') break;
+                    B[c] = e - '0'; c++;
+                } break;
+            case 'S': 
+                c = 0; S[0] = -1; S[1] = -1;
+                for (int i = 0; i < RULE_LENGTH; ++i) {
+                    int e = optarg[i];
+                    if (!e || e < '0' || e > '8') break;
+                    S[c] = e - '0'; c++;
+                } break;
+            case 'p': p = atoi(optarg); break;
+            default: break;
+        }
+    }
+
+    Field field(width, height, p, B, S);
+    UI ui(&field, width, height, fullscreen);
 
     ui.run();
 
