@@ -197,19 +197,20 @@ class UI {
 
 
 int main(int argc, char* argv[]) {
-    int width = 1920, height = 1080, p = 10;
+    SDL_DisplayMode DM;
+    int width = DM.w, height = DM.h, p = 10;
 
     int8_t B[RULE_LENGTH] = {3, -1, -1, -1, -1, -1, -1, -1, -1};
     int8_t S[RULE_LENGTH] = {2, 3, -1, -1, -1, -1, -1, -1, -1};
 
-    int fullscreen = 0;
+    int fullscreen = 1;
 
     int rez = 0, c;
-    while ((rez = getopt(argc, argv, "w:h:B:S:p:f")) != -1) {
+    while ((rez = getopt(argc, argv, "w:h:B:S:p:n")) != -1) {
         switch (rez) {
             case 'w': width = atoi(optarg); break;
             case 'h': height = atoi(optarg); break;
-            case 'f': fullscreen = 1; break;
+            case 'n': fullscreen = 0; break;
             case 'B': 
                 c = 0;
                 B[0] = -1;

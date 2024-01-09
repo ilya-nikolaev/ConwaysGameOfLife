@@ -8,9 +8,9 @@ The Game of Life, also known simply as Life, is a cellular automaton devised by 
 This implementation is written in C++ using the standard library and the SDL2 library
 
 ## Parameters
-+ `-w {int}` - Window width (default `1280`)
-+ `-h {int}` - Window height (default `720`)
-+ `-f` - Use fullscreen (default `false`)
++ `-w {int}` - Window width (your resolution by default)
++ `-h {int}` - Window height (your resolution by default)
++ `-n` - Run windowed
 + `-B {string}` - Rules for cell birth (example: `-B 345`, default `3`)
 + `-S {string}` - Rules for cell survival (example: `-S 567`, default `23`)
 + `-p {int 0-100}` - Percentage of field filling (default `10`)
