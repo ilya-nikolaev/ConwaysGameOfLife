@@ -146,7 +146,6 @@ class UI {
     public:
         UI(Field* field_, int x_, int y_, int f_) {
             x = x_; y = y_; c = x * y;
-            SDL_Init(SDL_INIT_VIDEO);
             SDL_CreateWindowAndRenderer(x, y, 0, &window, &renderer);
             if (f_) SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
             else SDL_SetWindowFullscreen(window, SDL_WINDOW_MAXIMIZED);
@@ -197,7 +196,11 @@ class UI {
 
 
 int main(int argc, char* argv[]) {
+    SDL_Init(SDL_INIT_VIDEO);
+
     SDL_DisplayMode DM;
+    SDL_GetDesktopDisplayMode(0, &DM);
+
     int width = DM.w, height = DM.h, p = 10;
 
     int8_t B[RULE_LENGTH] = {3, -1, -1, -1, -1, -1, -1, -1, -1};
