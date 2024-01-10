@@ -22,3 +22,11 @@ This implementation is written in C++ using the standard library and the SDL2 li
 + R - Refresh field
 + C - Clear field
 + Left Mouse Button - Draw on field
+
+## Build
+```Bash
+git clone https://github.com/ilya-nikolaev/ConwaysGameOfLife.git
+mkdir build && cd build
+cmake .. && make
+./game
+```
