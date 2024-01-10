@@ -14,6 +14,7 @@ This implementation is written in C++ using the standard library and the SDL2 li
 + `-B {string}` - Rules for cell birth (example: `-B 345`, default `3`)
 + `-S {string}` - Rules for cell survival (example: `-S 567`, default `23`)
 + `-p {int 0-100}` - Percentage of field filling (default `10`)
++ `-f {int}` - Max FPS (also ticks per second, default `60`)
 
 
 ## Controls

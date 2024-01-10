@@ -4,7 +4,6 @@
 #include <random>
 
 
-const int MAX_FPS = 60;
 const int RULE_LENGTH = 9;
 
 
@@ -103,6 +102,7 @@ class UI {
 
         Field* field;
         int x, y, c;
+        int maxFPS;
 
         bool running;
         bool is_stopped;
@@ -144,7 +144,7 @@ class UI {
         }
 
     public:
-        UI(Field* field_, int x_, int y_, int f_) {
+        UI(Field* field_, int x_, int y_, int f_, int maxFPS_) {
             x = x_; y = y_; c = x * y;
             SDL_CreateWindowAndRenderer(x, y, 0, &window, &renderer);
             if (f_) SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
@@ -157,6 +157,7 @@ class UI {
             field = field_;
 
             pixels = (uint32_t*)malloc(c * sizeof(uint32_t));
+            maxFPS = maxFPS_;
         }
 
         ~UI() {
@@ -178,7 +179,7 @@ class UI {
 
                 handle_controls();
 
-                if (time_delta > 1000.0 / MAX_FPS) {
+                if (time_delta > 1000.0 / maxFPS) {
                     draw();
 
                     SDL_UpdateTexture(texture, NULL, pixels, x * sizeof(uint32_t));
@@ -201,7 +202,7 @@ int main(int argc, char* argv[]) {
     SDL_DisplayMode DM;
     SDL_GetDesktopDisplayMode(0, &DM);
 
-    int width = DM.w, height = DM.h, p = 10;
+    int width = DM.w, height = DM.h, p = 10, maxFPS = 60;
 
     int8_t B[RULE_LENGTH] = {3, -1, -1, -1, -1, -1, -1, -1, -1};
     int8_t S[RULE_LENGTH] = {2, 3, -1, -1, -1, -1, -1, -1, -1};
@@ -209,7 +210,7 @@ int main(int argc, char* argv[]) {
     int fullscreen = 1;
 
     int rez = 0, c;
-    while ((rez = getopt(argc, argv, "w:h:B:S:p:n")) != -1) {
+    while ((rez = getopt(argc, argv, "w:h:B:S:p:nf:")) != -1) {
         switch (rez) {
             case 'w': width = atoi(optarg); break;
             case 'h': height = atoi(optarg); break;
@@ -230,12 +231,13 @@ int main(int argc, char* argv[]) {
                     S[c] = e - '0'; c++;
                 } break;
             case 'p': p = atoi(optarg); break;
+            case 'f': maxFPS = atoi(optarg); break;
             default: break;
         }
     }
 
     Field field(width, height, p, B, S);
-    UI ui(&field, width, height, fullscreen);
+    UI ui(&field, width, height, fullscreen, maxFPS);
 
     ui.run();
 
