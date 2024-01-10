@@ -3,7 +3,6 @@
 
 #include <random>
 
-
 const int RULE_LENGTH = 9;
 
 
