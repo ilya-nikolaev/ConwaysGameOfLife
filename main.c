@@ -6,10 +6,6 @@
 
 #define RULE_SIZE 9
 
-#define getAttr(object, attr) ((*object).attr)
-#define setAttr(object, attr, value) ((*object).attr = value)
-#define setIndexAttr(object, attr, index, value) ((*object).attr[index] = value)
-
 
 struct Point {
     size_t x;
@@ -68,46 +64,46 @@ uint8_t findRule(int8_t* rule, int8_t value) {
 
 
 void fillField(struct Field* field) {
-    for (size_t i = 0; i < getAttr(field, width) * getAttr(field, height); ++i) {
+    for (size_t i = 0; i < field->width * field->height; ++i) {
         uint8_t value = rand() % 100;
-        setIndexAttr(field, cells, i, value <= getAttr(field, fillingPercentage));
+        field->cells[i] = value <= field->fillingPercentage;
     }
 }
 
 
 void clearField(struct Field* field) {
-    for (size_t i = 0; i < getAttr(field, width) * getAttr(field, height); ++i) 
-        setIndexAttr(field, cells, i, 0);
+    for (size_t i = 0; i < field->width * field->height; ++i) 
+        field->cells[i] = 0;
 }
 
 
 void processTick(struct Field* field) {
-    uint8_t* backbuffer = calloc(getAttr(field, width) * getAttr(field, height), sizeof(uint8_t));
+    uint8_t* backbuffer = calloc(field->width * field->height, sizeof(uint8_t));
 
-    for (size_t i = 0; i < getAttr(field, width) * getAttr(field, height); ++i) {
-        struct Point cellPoint = {i % getAttr(field, width), i / getAttr(field, width)};
+    for (size_t i = 0; i < field->width * field->height; ++i) {
+        struct Point cellPoint = {i % field->width, i / field->width};
 
         uint8_t alive = 0;
         for (uint8_t j = 0; j < 9; ++j) {
             if (j == 4) continue;  // cell itself
             struct Point subCellPoint = {cellPoint.x + (j / 3) - 1, cellPoint.y + (j % 3) - 1};
-            struct Point pointOnTorus = mapToTorus(subCellPoint, getAttr(field, width), getAttr(field, height));
-            alive += getAttr(field, cells)[pointOnTorus.x + pointOnTorus.y * getAttr(field, width)];
+            struct Point pointOnTorus = mapToTorus(subCellPoint, field->width, field->height);
+            alive += field->cells[pointOnTorus.x + pointOnTorus.y * field->width];
         }
 
-        if ((getAttr(field, cells)[i] && findRule(getAttr(field, S), alive)) || 
-            ((!getAttr(field, cells)[i]) && findRule(getAttr(field, B), alive))) 
+        if ((field->cells[i] && findRule(field->S, alive)) || 
+            ((!field->cells[i]) && findRule(field->B, alive))) 
                 backbuffer[i] = 1;
     }
 
-    free(getAttr(field, cells));
-    setAttr(field, cells, backbuffer);
+    free(field->cells);
+    field->cells = backbuffer;
 }
 
 
 void drawTexture(struct UI* ui) {
-    for (size_t i = 0; i < getAttr(getAttr(ui, field), height) * getAttr(getAttr(ui, field), width); ++i) {
-        setIndexAttr(ui, pixels, i, getAttr(getAttr(ui, field), cells)[i] ? 0xFF00FF00 : 0x00000000);
+    for (size_t i = 0; i < ui->field->width * ui->field->height; ++i) {
+        ui->pixels[i] = ui->field->cells[i] ? 0xFF00FF00 : 0x00000000;
     }
 }
 
@@ -119,24 +115,24 @@ void handleControls(struct UI* ui) {
         switch (event.type) {
             case SDL_KEYDOWN:
                 switch(event.key.keysym.sym) {
-                    case SDLK_ESCAPE: setAttr(ui, isRunning, 0); break;
-                    case SDLK_SPACE: setAttr(ui, isPaused, !getAttr(ui, isPaused)); break;
-                    case SDLK_r: fillField(getAttr(ui, field)); break;
-                    case SDLK_c: clearField(getAttr(ui, field)); break;
+                    case SDLK_ESCAPE: ui->isRunning = 0; break;
+                    case SDLK_SPACE: ui->isPaused = !ui->isPaused; break;
+                    case SDLK_r: fillField(ui->field); break;
+                    case SDLK_c: clearField(ui->field); break;
                 }
                 break;
             case SDL_MOUSEBUTTONDOWN:
-                if (event.button.button == SDL_BUTTON_LEFT) setAttr(ui, leftMouseButtonPressed, 1); 
+                if (event.button.button == SDL_BUTTON_LEFT) ui->leftMouseButtonPressed = 1; 
                 break;
             case SDL_MOUSEBUTTONUP:
-                if (event.button.button == SDL_BUTTON_LEFT) setAttr(ui, leftMouseButtonPressed, 0); 
+                if (event.button.button == SDL_BUTTON_LEFT) ui->leftMouseButtonPressed = 0; 
                 break;
             case SDL_MOUSEMOTION:
-                if (getAttr(ui, leftMouseButtonPressed)) 
-                    setIndexAttr(getAttr(ui, field), cells, event.motion.x + event.motion.y * getAttr(getAttr(ui, field), width), 1); 
+                if (ui->leftMouseButtonPressed) 
+                    ui->field->cells[event.motion.x + event.motion.y * ui->field->width] = 1;
                 break;
             case SDL_QUIT:
-                setAttr(ui, isRunning, 0); break;
+                ui->isRunning = 0; break;
             default: break;
         }
     }
@@ -147,22 +143,22 @@ void run(struct UI* ui) {
     uint32_t time_curr = 0, time_prev = 0;
     uint32_t time_delta;
 
-    while (getAttr(ui, isRunning)) {
+    while (ui->isRunning) {
         time_curr = SDL_GetTicks();
         time_delta = time_curr - time_prev;
 
         handleControls(ui);
 
-        if (time_delta >= (double)1000 / getAttr(ui, maxFPS)) {
+        if (time_delta >= (double)1000 / ui->maxFPS) {
             drawTexture(ui);
 
-            SDL_UpdateTexture(getAttr(ui, texture), NULL, getAttr(ui, pixels), getAttr(getAttr(ui, field), width) * sizeof(uint32_t));
+            SDL_UpdateTexture(ui->texture, NULL, ui->pixels, ui->field->width * sizeof(uint32_t));
 
-            SDL_RenderClear(getAttr(ui, renderer));
-            SDL_RenderCopy(getAttr(ui, renderer), getAttr(ui, texture), NULL, NULL);
-            SDL_RenderPresent(getAttr(ui, renderer));
+            SDL_RenderClear(ui->renderer);
+            SDL_RenderCopy(ui->renderer, ui->texture, NULL, NULL);
+            SDL_RenderPresent(ui->renderer);
 
-            if (!getAttr(ui, isPaused)) processTick(getAttr(ui, field));
+            if (!(ui->isPaused)) processTick(ui->field);
             
             time_prev = time_curr;
         }
