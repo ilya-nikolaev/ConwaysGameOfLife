@@ -5,7 +5,7 @@ The Game of Life, also known simply as Life, is a cellular automaton devised by 
 [Wikipedia](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life)
 
 ## Implementation
-This implementation is written in C++ using the standard library and the SDL2 library
+This implementation is written in C99 using the standard library, unistd and the SDL2 library
 
 ## Console line parameters
 + `-w {int}` - Window width (your resolution by default)

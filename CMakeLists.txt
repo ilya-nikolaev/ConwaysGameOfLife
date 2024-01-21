@@ -5,11 +5,12 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-set(CMAKE_CXX_FLAGS "-Wall -Wextra")
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_C_FLAGS "-Wall -Wextra")
+set(CMAKE_C_FLAGS_DEBUG "-g")
+set(CMAKE_C_FLAGS_RELEASE "-O3")
 
-add_executable(game main.cpp)
+add_executable(game main.c)
 find_package(SDL2)
 
+set_property(TARGET game PROPERTY C_STANDARD 99)
 target_link_libraries(game SDL2main SDL2)
