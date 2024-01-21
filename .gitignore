@@ -1,6 +1,2 @@
-ConwaysGameOfLife.cbp
-ConwaysGameOfLife.depend
-ConwaysGameOfLife.layout
-bin/
-obj/
 build/
+.vscode/
