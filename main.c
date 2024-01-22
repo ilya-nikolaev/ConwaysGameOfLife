@@ -40,6 +40,9 @@ struct UI {
     uint8_t isPaused;
 
     uint8_t leftMouseButtonPressed;
+
+    uint32_t primaryColor;
+    uint32_t secondaryColor;
 };
 
 
@@ -85,7 +88,7 @@ void processTick(struct Field* field) {
 
         uint8_t alive = 0;
         for (uint8_t j = 0; j < 9; ++j) {
-            if (j == 4) continue;  // cell itself
+            if (j == 4) continue;  // Cell itself
             struct Point subCellPoint = {cellPoint.x + (j / 3) - 1, cellPoint.y + (j % 3) - 1};
             struct Point pointOnTorus = mapToTorus(subCellPoint, field->width, field->height);
             alive += field->cells[pointOnTorus.x + pointOnTorus.y * field->width];
@@ -103,7 +106,7 @@ void processTick(struct Field* field) {
 
 void drawTexture(struct UI* ui) {
     for (size_t i = 0; i < ui->field->width * ui->field->height; ++i) {
-        ui->pixels[i] = ui->field->cells[i] ? 0xFF00FF00 : 0x00000000;
+        ui->pixels[i] = ui->field->cells[i] ? ui->primaryColor : ui->secondaryColor;
     }
 }
 
@@ -166,6 +169,42 @@ void run(struct UI* ui) {
 }
 
 
+void parseRules(int8_t ruleSet[RULE_SIZE]) {
+    int c = 0;
+    for (int i = 0; i < RULE_SIZE; ++i) {
+        char e = optarg[i];
+        if (!e || e < '0' || e > '8') break;
+        ruleSet[c] = e - '0'; c++;
+    }
+}
+
+
+int8_t getHexValue(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
+    if (c >= 'A' && c <= 'F') return 10 + (c - 'A');
+
+    return -1;  // Not hex digit
+}
+
+
+uint32_t parseColor() {
+    uint32_t color = 0xFF000000;
+
+    for (int i = 0; i < 6; ++i) {
+        char c = optarg[i];
+        if (!c) break;
+
+        int8_t hexValue = getHexValue(c);
+        if (hexValue == -1) return 0;  // Error, returning black
+
+        color |= (uint32_t)hexValue << ((5 - i) * 4);
+    }
+
+    return color;
+}
+
+
 int main(int argc, char* argv[]) {
     srand(time(NULL));
 
@@ -176,34 +215,27 @@ int main(int argc, char* argv[]) {
 
     size_t width = DM.w, height = DM.h;
     uint8_t fillingPercentage = 10, maxFPS = 60, fullscreenEnabled = 1;
+    uint32_t primary = 0xFF00FF00, secondary = 0xFF000000;
 
-    int8_t B[] = {3, -1, -1, -1, -1, -1, -1, -1, -1};
-    int8_t S[] = {2, 3, -1, -1, -1, -1, -1, -1, -1};
+    int8_t B[RULE_SIZE] = {3, -1, -1, -1, -1, -1, -1, -1, -1};
+    int8_t S[RULE_SIZE] = {2, 3, -1, -1, -1, -1, -1, -1, -1};
 
-    int rez, c;
-    while ((rez = getopt(argc, argv, "w:h:B:S:p:nf:")) != -1) {
+    int rez;
+    while ((rez = getopt(argc, argv, "w:h:B:S:p:nf:c:b:")) != -1) {
         switch (rez) {
             case 'w': width = (size_t)atoi(optarg); break;
             case 'h': height = (size_t)atoi(optarg); break;
             case 'n': fullscreenEnabled = 0; break;
             case 'B': 
-                c = 0;
                 B[0] = -1;  // Drop default settings
-                for (int i = 0; i < RULE_SIZE; ++i) {
-                    int e = optarg[i];
-                    if (!e || e < '0' || e > '8') break;
-                    B[c] = e - '0'; c++;
-                } break;
-            case 'S': 
-                c = 0; 
+                parseRules(B); break;
+            case 'S':  
                 S[0] = -1; S[1] = -1;  // Drop default settings
-                for (int i = 0; i < RULE_SIZE; ++i) {
-                    int e = optarg[i];
-                    if (!e || e < '0' || e > '8') break;
-                    S[c] = e - '0'; c++;
-                } break;
+                parseRules(S); break;
             case 'p': fillingPercentage = (uint8_t)atoi(optarg); break;
             case 'f': maxFPS = (uint8_t)atoi(optarg); break;
+            case 'c': primary = parseColor(); break;
+            case 'b': secondary = parseColor(); break;
             default: break;
         }
     }
@@ -221,6 +253,8 @@ int main(int argc, char* argv[]) {
     ui.texture = SDL_CreateTexture(ui.renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, width, height);
     ui.maxFPS = maxFPS;
     ui.isRunning = 1; ui.isPaused = 0;
+    ui.primaryColor = primary;
+    ui.secondaryColor = secondary;
     ui.field = &field;
     ui.pixels = malloc(width * height * sizeof(uint32_t));
 

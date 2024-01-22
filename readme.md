@@ -15,6 +15,8 @@ This implementation is written in C99 using the standard library, unistd and the
 + `-S {string}` - Rules for cell survival (example: `-S 567`, default `23`)
 + `-p {int 0-100}` - Percentage of field filling (default `10`)
 + `-f {int}` - Max FPS (also ticks per second, default `60`)
++ `-c {hex}` - Color of cells (RGB, default `00FF00`)
++ `-b {hex}` - Color of background (RGB, default `000000`)
 
 ## Controls
 + Escape - Exit
@@ -26,6 +28,7 @@ This implementation is written in C99 using the standard library, unistd and the
 ## Build
 ```Bash
 git clone https://github.com/ilya-nikolaev/ConwaysGameOfLife.git
+cd ConwaysGameOfLife
 mkdir build && cd build
 cmake .. && make
 ./game
