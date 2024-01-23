@@ -33,3 +33,7 @@ mkdir build && cd build
 cmake .. && make
 ./game
 ```
+
+## TODO
++ Add the ability to move the camera
++ Add the ability to zoom in on the image
