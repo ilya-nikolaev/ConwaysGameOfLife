@@ -40,6 +40,7 @@ struct UI {
     uint8_t isPaused;
 
     uint8_t leftMouseButtonPressed;
+    uint8_t rightMouseButtonPressed;
 
     uint32_t primaryColor;
     uint32_t secondaryColor;
@@ -125,14 +126,23 @@ void handleControls(struct UI* ui) {
                 }
                 break;
             case SDL_MOUSEBUTTONDOWN:
-                if (event.button.button == SDL_BUTTON_LEFT) ui->leftMouseButtonPressed = 1; 
+                if (event.button.button == SDL_BUTTON_LEFT) {
+                    ui->leftMouseButtonPressed = 1; 
+                    ui->field->cells[event.button.x + event.button.y * ui->field->width] = 1;
+                } else if (event.button.button == SDL_BUTTON_RIGHT) {
+                    ui->rightMouseButtonPressed = 1; 
+                    ui->field->cells[event.button.x + event.button.y * ui->field->width] = 0;
+                }
                 break;
             case SDL_MOUSEBUTTONUP:
                 if (event.button.button == SDL_BUTTON_LEFT) ui->leftMouseButtonPressed = 0; 
+                else if (event.button.button == SDL_BUTTON_RIGHT) ui->rightMouseButtonPressed= 0; 
                 break;
             case SDL_MOUSEMOTION:
                 if (ui->leftMouseButtonPressed) 
                     ui->field->cells[event.motion.x + event.motion.y * ui->field->width] = 1;
+                else if (ui->rightMouseButtonPressed)
+                    ui->field->cells[event.motion.x + event.motion.y * ui->field->width] = 0;
                 break;
             case SDL_QUIT:
                 ui->isRunning = 0; break;
