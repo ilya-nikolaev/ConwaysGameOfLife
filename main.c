@@ -6,6 +6,8 @@
 
 #define RULE_SIZE 9
 
+double FPS = 0;
+
 
 struct Point {
     size_t x;
@@ -14,7 +16,7 @@ struct Point {
 
 
 struct Field {
-    uint8_t* cells = malloc(width * height * sizeof(uint8_t));
+    uint8_t* cells;
 
     size_t width;
     size_t height;
@@ -31,16 +33,16 @@ struct UI {
     SDL_Window* window;
     SDL_Texture* texture;
 
-    uint32_t* pixels = malloc(width * height * sizeof(uint32_t));
+    uint32_t* pixels;
     struct Field* field;
 
     uint8_t maxFPS;
 
-    uint8_t isRunning = 1;
-    uint8_t isPaused = 0;
+    uint8_t isRunning;
+    uint8_t isPaused;
 
-    uint8_t leftMouseButtonPressed = 0;
-    uint8_t rightMouseButtonPressed = 0;
+    uint8_t leftMouseButtonPressed;
+    uint8_t rightMouseButtonPressed;
 
     uint32_t primaryColor;
     uint32_t secondaryColor;
@@ -163,6 +165,7 @@ void run(struct UI* ui) {
         handleControls(ui);
 
         if (time_delta >= (double)1000 / ui->maxFPS) {
+            FPS = 1000.0 / (double)time_delta;
             drawTexture(ui);
 
             SDL_UpdateTexture(ui->texture, NULL, ui->pixels, ui->field->width * sizeof(uint32_t));
@@ -252,6 +255,8 @@ int main(int argc, char* argv[]) {
 
     struct Field field;
 
+    field.cells = malloc(width * height * sizeof(uint8_t));
+
     field.width = width; 
     field.height = height;
 
@@ -263,6 +268,9 @@ int main(int argc, char* argv[]) {
     fillField(&field);
 
     struct UI ui;
+
+    ui.pixels = malloc(width * height * sizeof(uint32_t));
+
     ui.field = &field;
 
     SDL_CreateWindowAndRenderer(width, height, 0, &ui.window, &ui.renderer);
@@ -277,6 +285,12 @@ int main(int argc, char* argv[]) {
     ui.primaryColor = primary;
     ui.secondaryColor = secondary;
 
+    ui.isRunning = 1;
+    ui.isPaused = 0;
+
+    ui.leftMouseButtonPressed = 0;
+    ui.rightMouseButtonPressed = 0;
+
     run(&ui);
 
     SDL_DestroyTexture(ui.texture);
@@ -285,6 +299,8 @@ int main(int argc, char* argv[]) {
 
     free(field.cells);
     free(ui.pixels);
+
+    printf("%f\n", FPS);
 
     SDL_Quit();
     return EXIT_SUCCESS;
