@@ -14,7 +14,7 @@ struct Point {
 
 
 struct Field {
-    uint8_t* cells;
+    uint8_t* cells = malloc(width * height * sizeof(uint8_t));
 
     size_t width;
     size_t height;
@@ -31,16 +31,16 @@ struct UI {
     SDL_Window* window;
     SDL_Texture* texture;
 
-    uint32_t* pixels;
+    uint32_t* pixels = malloc(width * height * sizeof(uint32_t));
     struct Field* field;
 
     uint8_t maxFPS;
 
-    uint8_t isRunning;
-    uint8_t isPaused;
+    uint8_t isRunning = 1;
+    uint8_t isPaused = 0;
 
-    uint8_t leftMouseButtonPressed;
-    uint8_t rightMouseButtonPressed;
+    uint8_t leftMouseButtonPressed = 0;
+    uint8_t rightMouseButtonPressed = 0;
 
     uint32_t primaryColor;
     uint32_t secondaryColor;
@@ -70,7 +70,7 @@ uint8_t findRule(int8_t* rule, int8_t value) {
 void fillField(struct Field* field) {
     for (size_t i = 0; i < field->width * field->height; ++i) {
         uint8_t value = rand() % 100;
-        field->cells[i] = value <= field->fillingPercentage;
+        field->cells[i] = value <= field->fillingPercentage ? 1 : 0;
     }
 }
 
@@ -251,31 +251,39 @@ int main(int argc, char* argv[]) {
     }
 
     struct Field field;
-    field.cells = malloc(width * height * sizeof(uint8_t));
-    field.width = width; field.height = height;
-    field.fillingPercentage = fillingPercentage;
-    field.B = B; field.S = S;
 
-    struct UI ui;
-    SDL_CreateWindowAndRenderer(width, height, 0, &ui.window, &ui.renderer);
-    if (fullscreenEnabled) SDL_SetWindowFullscreen(ui.window, SDL_WINDOW_FULLSCREEN);
-    else SDL_SetWindowFullscreen(ui.window, SDL_WINDOW_MAXIMIZED);
-    ui.texture = SDL_CreateTexture(ui.renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, width, height);
-    ui.maxFPS = maxFPS;
-    ui.isRunning = 1; ui.isPaused = 0;
-    ui.primaryColor = primary;
-    ui.secondaryColor = secondary;
-    ui.field = &field;
-    ui.pixels = malloc(width * height * sizeof(uint32_t));
+    field.width = width; 
+    field.height = height;
+
+    field.fillingPercentage = fillingPercentage;
+
+    field.B = B; 
+    field.S = S;
 
     fillField(&field);
-    run(&ui);
 
-    free(field.cells);
+    struct UI ui;
+    ui.field = &field;
+
+    SDL_CreateWindowAndRenderer(width, height, 0, &ui.window, &ui.renderer);
+
+    if (fullscreenEnabled) SDL_SetWindowFullscreen(ui.window, SDL_WINDOW_FULLSCREEN);
+    else SDL_SetWindowFullscreen(ui.window, SDL_WINDOW_MAXIMIZED);
+
+    ui.texture = SDL_CreateTexture(ui.renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, width, height);
+
+    ui.maxFPS = maxFPS;
+
+    ui.primaryColor = primary;
+    ui.secondaryColor = secondary;
+
+    run(&ui);
 
     SDL_DestroyTexture(ui.texture);
     SDL_DestroyRenderer(ui.renderer);
     SDL_DestroyWindow(ui.window);
+
+    free(field.cells);
     free(ui.pixels);
 
     SDL_Quit();
