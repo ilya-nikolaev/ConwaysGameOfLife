@@ -1,12 +1,11 @@
 #include <SDL2/SDL.h>
 
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 
 #define RULE_SIZE 9
-
-double FPS = 0;
 
 
 struct Point {
@@ -163,29 +162,40 @@ void handleControls(struct UI* ui) {
 }
 
 
+int CGOL_sleep(long ms) {
+    if (ms <= 0) return 0;
+
+    struct timespec req = {
+        (int)(ms / 1000),
+        (ms % 1000) * 1000000
+    };
+
+    return nanosleep(&req, NULL);
+}
+
+
 void run(struct UI* ui) {
     uint32_t time_curr = 0, time_prev = 0;
     uint32_t time_delta;
 
+    double maxDelay = 1000.0 / ui->maxFPS;
+
     while (ui->isRunning) {
         time_curr = SDL_GetTicks();
         time_delta = time_curr - time_prev;
+        CGOL_sleep(maxDelay - time_delta);
 
         handleControls(ui);
 
-        if (time_delta >= (double)1000 / ui->maxFPS) {
-            FPS = 1000.0 / (double)time_delta;
-            drawTexture(ui);
+        drawTexture(ui);
+        SDL_UpdateTexture(ui->texture, NULL, ui->pixels, ui->field->width * sizeof(uint32_t));
 
-            SDL_UpdateTexture(ui->texture, NULL, ui->pixels, ui->field->width * sizeof(uint32_t));
+        SDL_RenderCopy(ui->renderer, ui->texture, NULL, NULL);
+        SDL_RenderPresent(ui->renderer);
 
-            SDL_RenderCopy(ui->renderer, ui->texture, NULL, NULL);
-            SDL_RenderPresent(ui->renderer);
-
-            if (!(ui->isPaused)) processTick(ui->field);
-            
-            time_prev = time_curr;
-        }
+        if (!(ui->isPaused)) processTick(ui->field);
+        
+        time_prev = time_curr;
     }
 }
 
@@ -309,8 +319,6 @@ int main(int argc, char* argv[]) {
 
     free(field.cells);
     free(ui.pixels);
-
-    printf("%f\n", FPS);
 
     SDL_Quit();
     return EXIT_SUCCESS;
