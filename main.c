@@ -17,9 +17,11 @@ struct Point {
 
 struct Field {
     uint8_t* cells;
+    uint8_t* backbuffer;
 
     size_t width;
     size_t height;
+    size_t count;
 
     uint8_t fillingPercentage;
 
@@ -70,7 +72,7 @@ uint8_t findRule(int8_t* rule, int8_t value) {
 
 
 void fillField(struct Field* field) {
-    for (size_t i = 0; i < field->width * field->height; ++i) {
+    for (size_t i = 0; i < field->count; ++i) {
         uint8_t value = rand() % 100;
         field->cells[i] = value <= field->fillingPercentage ? 1 : 0;
     }
@@ -78,37 +80,44 @@ void fillField(struct Field* field) {
 
 
 void clearField(struct Field* field) {
-    for (size_t i = 0; i < field->width * field->height; ++i) 
+    for (size_t i = 0; i < field->count; ++i) 
         field->cells[i] = 0;
 }
 
 
 void processTick(struct Field* field) {
-    uint8_t* backbuffer = calloc(field->width * field->height, sizeof(uint8_t));
+    memset(field->backbuffer, 0, field->count);
 
-    for (size_t i = 0; i < field->width * field->height; ++i) {
+    for (size_t i = 0; i < field->count; ++i) {
         struct Point cellPoint = {i % field->width, i / field->width};
 
         uint8_t alive = 0;
         for (uint8_t j = 0; j < 9; ++j) {
             if (j == 4) continue;  // Cell itself
+
             struct Point subCellPoint = {cellPoint.x + (j / 3) - 1, cellPoint.y + (j % 3) - 1};
-            struct Point pointOnTorus = mapToTorus(subCellPoint, field->width, field->height);
+
+            struct Point pointOnTorus = subCellPoint;
+            if (!(cellPoint.x && cellPoint.y) || cellPoint.x == field->width - 1 || cellPoint.y == field->height - 1) {
+                pointOnTorus = mapToTorus(subCellPoint, field->width, field->height);
+            }
+
             alive += field->cells[pointOnTorus.x + pointOnTorus.y * field->width];
         }
 
         if ((field->cells[i] && findRule(field->S, alive)) || 
             ((!field->cells[i]) && findRule(field->B, alive))) 
-                backbuffer[i] = 1;
+                field->backbuffer[i] = 1;
     }
 
-    free(field->cells);
-    field->cells = backbuffer;
+    uint8_t* tmp_ptr = field->cells;
+    field->cells = field->backbuffer;
+    field->backbuffer = tmp_ptr;
 }
 
 
 void drawTexture(struct UI* ui) {
-    for (size_t i = 0; i < ui->field->width * ui->field->height; ++i) {
+    for (size_t i = 0; i < ui->field->count; ++i) {
         ui->pixels[i] = ui->field->cells[i] ? ui->primaryColor : ui->secondaryColor;
     }
 }
@@ -170,7 +179,6 @@ void run(struct UI* ui) {
 
             SDL_UpdateTexture(ui->texture, NULL, ui->pixels, ui->field->width * sizeof(uint32_t));
 
-            SDL_RenderClear(ui->renderer);
             SDL_RenderCopy(ui->renderer, ui->texture, NULL, NULL);
             SDL_RenderPresent(ui->renderer);
 
@@ -255,10 +263,12 @@ int main(int argc, char* argv[]) {
 
     struct Field field;
 
-    field.cells = malloc(width * height * sizeof(uint8_t));
-
     field.width = width; 
     field.height = height;
+    field.count = width * height;
+
+    field.cells = malloc(field.count * sizeof(uint8_t));
+    field.backbuffer= malloc(field.count * sizeof(uint8_t));
 
     field.fillingPercentage = fillingPercentage;
 
@@ -269,7 +279,7 @@ int main(int argc, char* argv[]) {
 
     struct UI ui;
 
-    ui.pixels = malloc(width * height * sizeof(uint32_t));
+    ui.pixels = malloc(field.count * sizeof(uint32_t));
 
     ui.field = &field;
 
