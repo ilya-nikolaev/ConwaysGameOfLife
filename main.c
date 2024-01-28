@@ -1,11 +1,13 @@
 #include <SDL2/SDL.h>
 
+#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <time.h>
 #include <unistd.h>
 
 #define RULE_SIZE 9
+
+double FPS = 0;
 
 
 struct Point {
@@ -85,8 +87,6 @@ void clearField(struct Field* field) {
 
 
 void processTick(struct Field* field) {
-    memset(field->backbuffer, 0, field->count);
-
     for (size_t i = 0; i < field->count; ++i) {
         struct Point cellPoint = {i % field->width, i / field->width};
 
@@ -107,6 +107,7 @@ void processTick(struct Field* field) {
         if ((field->cells[i] && findRule(field->S, alive)) || 
             ((!field->cells[i]) && findRule(field->B, alive))) 
                 field->backbuffer[i] = 1;
+        else field->backbuffer[i] = 0;
     }
 
     uint8_t* tmp_ptr = field->cells;
@@ -175,15 +176,15 @@ int CGOL_sleep(long ms) {
 
 
 void run(struct UI* ui) {
-    uint32_t time_curr = 0, time_prev = 0;
-    uint32_t time_delta;
-
+    uint32_t timePrev = 0, timeCurr, timeDelta;
     double maxDelay = 1000.0 / ui->maxFPS;
 
     while (ui->isRunning) {
-        time_curr = SDL_GetTicks();
-        time_delta = time_curr - time_prev;
-        CGOL_sleep(maxDelay - time_delta);
+        timeCurr = SDL_GetTicks();
+        timeDelta = timeCurr - timePrev;
+        CGOL_sleep(maxDelay - timeDelta);
+
+        FPS = 1000.0 / (SDL_GetTicks() - timePrev);
 
         handleControls(ui);
 
@@ -195,7 +196,7 @@ void run(struct UI* ui) {
 
         if (!(ui->isPaused)) processTick(ui->field);
         
-        time_prev = time_curr;
+        timePrev = timeCurr;
     }
 }
 
@@ -319,6 +320,8 @@ int main(int argc, char* argv[]) {
 
     free(field.cells);
     free(ui.pixels);
+
+    printf("Last frame FPS: %f\n\n", FPS);
 
     SDL_Quit();
     return EXIT_SUCCESS;
