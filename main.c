@@ -1,10 +1,12 @@
 #include <SDL2/SDL.h>
 
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
 
+#define THREADS_COUNT 12
 #define RULE_SIZE 9
 
 double FPS = 0;
@@ -86,9 +88,18 @@ void clearField(struct Field* field) {
 }
 
 
-void processTick(struct Field* field) {
-    for (size_t i = 0; i < field->count; ++i) {
-        struct Point cellPoint = {i % field->width, i / field->width};
+struct TickArg {
+    struct Field* field;
+    size_t start;
+    size_t end;
+};
+
+
+void* processTick(void* arg) {
+    struct TickArg args = *(struct TickArg*)arg;
+
+    for (size_t i = args.start; i < args.end; ++i) {
+        struct Point cellPoint = {i % args.field->width, i / args.field->width};
 
         uint8_t alive = 0;
         for (uint8_t j = 0; j < 9; ++j) {
@@ -97,19 +108,25 @@ void processTick(struct Field* field) {
             struct Point subCellPoint = {cellPoint.x + (j / 3) - 1, cellPoint.y + (j % 3) - 1};
 
             struct Point pointOnTorus = subCellPoint;
-            if (!(cellPoint.x && cellPoint.y) || cellPoint.x == field->width - 1 || cellPoint.y == field->height - 1) {
-                pointOnTorus = mapToTorus(subCellPoint, field->width, field->height);
+            if (!(cellPoint.x && cellPoint.y) || cellPoint.x == args.field->width - 1 || cellPoint.y == args.field->height - 1) {
+                pointOnTorus = mapToTorus(subCellPoint, args.field->width, args.field->height);
             }
 
-            alive += field->cells[pointOnTorus.x + pointOnTorus.y * field->width];
+            alive += args.field->cells[pointOnTorus.x + pointOnTorus.y * args.field->width];
         }
 
-        if ((field->cells[i] && findRule(field->S, alive)) || 
-            ((!field->cells[i]) && findRule(field->B, alive))) 
-                field->backbuffer[i] = 1;
-        else field->backbuffer[i] = 0;
+        if ((args.field->cells[i] && findRule(args.field->S, alive)) || 
+            ((!args.field->cells[i]) && findRule(args.field->B, alive))) 
+                args.field->backbuffer[i] = 1;
+        else args.field->backbuffer[i] = 0;
     }
+    
+    free(arg);
+    return NULL;
+}
 
+
+void swapBuffers(struct Field* field) {
     uint8_t* tmp_ptr = field->cells;
     field->cells = field->backbuffer;
     field->backbuffer = tmp_ptr;
@@ -179,6 +196,8 @@ void run(struct UI* ui) {
     uint32_t timePrev = 0, timeCurr, timeDelta;
     double maxDelay = 1000.0 / ui->maxFPS;
 
+    pthread_t threads[THREADS_COUNT];
+
     while (ui->isRunning) {
         timeCurr = SDL_GetTicks();
         timeDelta = timeCurr - timePrev;
@@ -194,7 +213,26 @@ void run(struct UI* ui) {
         SDL_RenderCopy(ui->renderer, ui->texture, NULL, NULL);
         SDL_RenderPresent(ui->renderer);
 
-        if (!(ui->isPaused)) processTick(ui->field);
+        if (!(ui->isPaused)) {
+            for (int i = 0; i < THREADS_COUNT; ++i) {
+                struct TickArg* arg = malloc(sizeof(struct TickArg));
+
+                struct TickArg myArg = {
+                    .field = ui->field, 
+                    .start = i * (ui->field->count / THREADS_COUNT), 
+                    .end = (i + 1) * (ui->field->count / THREADS_COUNT) 
+                };
+
+                *arg = myArg;
+
+                if (pthread_create(&threads[i], NULL, &processTick, (void*)arg) != 0) perror("Failed");
+            }
+            
+            for (int i = 0; i < THREADS_COUNT; ++i)
+                if (pthread_join(threads[i], NULL) != 0) perror("Failed");
+
+            swapBuffers(ui->field);
+        }
         
         timePrev = timeCurr;
     }
@@ -272,27 +310,33 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    struct Field field;
+    struct Field field = {
+        .width = width, .height = height,
+        .count = width * height,
 
-    field.width = width; 
-    field.height = height;
-    field.count = width * height;
+        .fillingPercentage = fillingPercentage,
+
+        .B = B, .S = S,
+    };
 
     field.cells = malloc(field.count * sizeof(uint8_t));
-    field.backbuffer= malloc(field.count * sizeof(uint8_t));
-
-    field.fillingPercentage = fillingPercentage;
-
-    field.B = B; 
-    field.S = S;
+    field.backbuffer = malloc(field.count * sizeof(uint8_t));
 
     fillField(&field);
 
-    struct UI ui;
+    struct UI ui = {
+        .field = &field,
+
+        .maxFPS = maxFPS,
+
+        .primaryColor = primary, .secondaryColor = secondary,
+
+        .isRunning = 1, .isPaused = 0,
+
+        .leftMouseButtonPressed = 0, .rightMouseButtonPressed = 0,
+    };
 
     ui.pixels = malloc(field.count * sizeof(uint32_t));
-
-    ui.field = &field;
 
     SDL_CreateWindowAndRenderer(width, height, 0, &ui.window, &ui.renderer);
 
@@ -300,17 +344,6 @@ int main(int argc, char* argv[]) {
     else SDL_SetWindowFullscreen(ui.window, SDL_WINDOW_MAXIMIZED);
 
     ui.texture = SDL_CreateTexture(ui.renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, width, height);
-
-    ui.maxFPS = maxFPS;
-
-    ui.primaryColor = primary;
-    ui.secondaryColor = secondary;
-
-    ui.isRunning = 1;
-    ui.isPaused = 0;
-
-    ui.leftMouseButtonPressed = 0;
-    ui.rightMouseButtonPressed = 0;
 
     run(&ui);
 
