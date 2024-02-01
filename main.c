@@ -133,10 +133,21 @@ void swapBuffers(struct Field* field) {
 }
 
 
-void drawTexture(struct UI* ui) {
-    for (size_t i = 0; i < ui->field->count; ++i) {
-        ui->pixels[i] = ui->field->cells[i] ? ui->primaryColor : ui->secondaryColor;
+struct DrawArg {
+    struct UI* ui;
+    size_t start;
+    size_t end;
+};
+
+
+void* drawTexture(void* arg) {
+    struct DrawArg args = *(struct DrawArg*)arg;
+
+    for (size_t i = args.start; i < args.end; ++i) {
+        args.ui->pixels[i] = args.ui->field->cells[i] ? args.ui->primaryColor : args.ui->secondaryColor;
     }
+
+    return NULL;
 }
 
 
@@ -197,6 +208,7 @@ void run(struct UI* ui) {
     double maxDelay = 1000.0 / ui->maxFPS;
 
     pthread_t threads[THREADS_COUNT];
+    size_t cellsPerThread = ui->field->count / THREADS_COUNT;
 
     while (ui->isRunning) {
         timeCurr = SDL_GetTicks();
@@ -207,7 +219,23 @@ void run(struct UI* ui) {
 
         handleControls(ui);
 
-        drawTexture(ui);
+        for (int i = 0; i < THREADS_COUNT; ++i) {
+            struct DrawArg* arg = malloc(sizeof(struct DrawArg));
+
+            struct DrawArg myArg = {
+                .ui = ui,
+                .start = i * cellsPerThread,
+                .end = (i + 1) * cellsPerThread,
+            };
+
+            *arg = myArg;
+
+            if (pthread_create(&threads[i], NULL, &drawTexture, (void*)arg) != 0) perror("Failed");
+        }
+
+        for (int i = 0; i < THREADS_COUNT; ++i)
+            if (pthread_join(threads[i], NULL) != 0) perror("Failed");
+        
         SDL_UpdateTexture(ui->texture, NULL, ui->pixels, ui->field->width * sizeof(uint32_t));
 
         SDL_RenderCopy(ui->renderer, ui->texture, NULL, NULL);
@@ -219,8 +247,8 @@ void run(struct UI* ui) {
 
                 struct TickArg myArg = {
                     .field = ui->field, 
-                    .start = i * (ui->field->count / THREADS_COUNT), 
-                    .end = (i + 1) * (ui->field->count / THREADS_COUNT) 
+                    .start = i * cellsPerThread, 
+                    .end = (i + 1) * cellsPerThread, 
                 };
 
                 *arg = myArg;
