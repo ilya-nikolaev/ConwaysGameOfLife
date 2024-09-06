@@ -7,7 +7,7 @@ endif()
 
 set(CMAKE_C_FLAGS "-Wall -Wextra")
 set(CMAKE_C_FLAGS_DEBUG "-g")
-set(CMAKE_C_FLAGS_RELEASE "-O3")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native")
 
 add_executable(game main.c)
 find_package(SDL2)
