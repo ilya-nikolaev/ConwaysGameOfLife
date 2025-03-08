@@ -5,28 +5,29 @@ The Game of Life, also known simply as Life, is a cellular automaton devised by 
 [Wikipedia](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life)
 
 ## Implementation
-This implementation is written in C99 using the standard library, unistd and the SDL2 library
+This implementation is written in C99 using the standard library, unistd.h, and the SDL2 library.
 
 ## Console line parameters
-+ `-w {int}` - Window width (your resolution by default)
-+ `-h {int}` - Window height (your resolution by default)
-+ `-n` - Run windowed
-+ `-B {string}` - Rules for cell birth (example: `-B 345`, default `3`)
-+ `-S {string}` - Rules for cell survival (example: `-S 567`, default `23`)
-+ `-p {int 0-100}` - Percentage of field filling (default `10`)
-+ `-f {int}` - Max FPS (also ticks per second, default `60`)
-+ `-c {hex}` - Color of cells (RGB, default `00FF00`)
-+ `-b {hex}` - Color of background (RGB, default `000000`)
++ `-w {int}` - field width (default is determined by screen resolution)
++ `-h {int}` - field height (default is determined by screen resolution)
++ `-n` - run in a windowed mode
++ `-B {string}` - rules for cell birth (e.g., `-B 345`, default `3`)
++ `-S {string}` - rules for cell survival (e.g., `-S 567`, default `23`)
++ `-p {int 0-100}` - percentage of field filled at start (default `10`)
++ `-f {int}` - maximum FPS (also determines ticks per second, default `60`)
++ `-c {hex}` - cell color (hex, default `00FF00`)
++ `-b {hex}` - background color (hex, default `000000`)
 
 ## Controls
-+ Escape - Exit
-+ Space - Pause
-+ R - Refresh field
-+ C - Clear field
-+ Left Mouse Button - Draw on field
++ `Esc` - exit
++ `Space` - pause
++ `R` - reset field
++ `C` - clear field
++ `LMB` - draw cells
++ `RMB` - erase cells
 
 ## Build
-```Bash
+```shell
 git clone https://github.com/ilya-nikolaev/ConwaysGameOfLife.git
 cd ConwaysGameOfLife
 mkdir build && cd build
@@ -35,5 +36,5 @@ cmake .. && make
 ```
 
 ## TODO
-+ Add the ability to move the camera
-+ Add the ability to zoom in on the image
++ Add camera movement
++ Add zoom functionality
