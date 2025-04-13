@@ -12,10 +12,10 @@ int main(int argc, char *argv[])
     srand(time(NULL));
 
     uint32_t primary_color = 0xFF00FF00, background_color = 0xFF000000;
-    uint8_t max_FPS = 60;
+    uint8_t max_FPS = 24;
 
     Rules rules;
-    RulesBitmap16 birth = 8, survival = 12;
+    RulesBitmap16 birth = 1 << 3, survival = 1 << 2 | 1 << 3;
 
     int c;
     while ((c = getopt(argc, argv, "r:f:c:b:")) != -1)
