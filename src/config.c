@@ -42,9 +42,12 @@ Rules config_parse_rules(char *rules_str)
 
 uint32_t config_parse_color(char *hex_color)
 {
+    while (*hex_color == '#')
+        hex_color++;
+
     uint32_t color = 0xFF000000;
 
-    for (int i = 0; i < 6 && hex_color[i]; ++i)
+    for (int i = 1; i <= 6 && hex_color[i]; ++i)
     {
         char c = hex_color[i];
 
@@ -58,7 +61,7 @@ uint32_t config_parse_color(char *hex_color)
         else
             return 0; // Black
 
-        color |= value << ((5 - i) * 4);
+        color |= value << ((6 - i) * 4);
     }
 
     return color;
